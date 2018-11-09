@@ -101,6 +101,7 @@ class DiscreteDistribution(dict):
         0.0
         """
         total = self.total()
+        if total == 0: return
         rand = random.random()
         running = 0
         for key in self.keys():
@@ -358,8 +359,23 @@ class ParticleFilter(InferenceModule):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-        "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        pacmanPosition = gameState.getPacmanPosition()
+        jailPosition = self.getJailPosition()
+        distribution = DiscreteDistribution()
+        beleaf = self.getBeliefDistribution()
+        total = beleaf.total()
+        for particle in self.particles:
+            distribution[particle] = total * beleaf[particle] * self.getObservationProb(observation, pacmanPosition, particle, jailPosition)
+        
+        
+        newParticles = []
+        while len(newParticles) < len(self.particles):
+            sample = distribution.sample()
+            newParticles.append(sample)
+        self.particles = newParticles
+        if distribution.total() == 0:
+            self.initializeUniformly(gameState)
+        
 
     def elapseTime(self, gameState):
         """
@@ -408,8 +424,7 @@ class JointParticleFilter(ParticleFilter):
         uniform prior.
         """
         self.particles = []
-        "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        self.particles = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
 
     def addGhostAgent(self, agent):
         """
@@ -455,7 +470,9 @@ class JointParticleFilter(ParticleFilter):
 
             # now loop through and update each entry in newParticle...
             "*** YOUR CODE HERE ***"
-            raiseNotDefined()
+            for i in range(self.numGhosts):
+                newPosDist = self.getPositionDistribution(gameState, list(oldParticle), i, self.ghostAgents[i])
+                newParticle[i] = newPosDist.sample()
 
             """*** END YOUR CODE HERE ***"""
             newParticles.append(tuple(newParticle))
