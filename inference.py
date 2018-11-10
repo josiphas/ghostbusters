@@ -359,22 +359,25 @@ class ParticleFilter(InferenceModule):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
+
         pacmanPosition = gameState.getPacmanPosition()
         jailPosition = self.getJailPosition()
         distribution = DiscreteDistribution()
-        beleaf = self.getBeliefDistribution()
-        total = beleaf.total()
+
         for particle in self.particles:
-            distribution[particle] = total * beleaf[particle] * self.getObservationProb(observation, pacmanPosition, particle, jailPosition)
-        
+            distribution[particle] += self.getObservationProb(observation, pacmanPosition, particle, jailPosition)
         
         newParticles = []
-        while len(newParticles) < len(self.particles):
-            sample = distribution.sample()
-            newParticles.append(sample)
-        self.particles = newParticles
-        if distribution.total() == 0:
-            self.initializeUniformly(gameState)
+
+        if distribution.total() != 0:
+        	for i in range(self.numParticles):
+        		sample = distribution.sample()
+        		if sample is not None:
+        			newParticles.append(sample)
+        		self.particles = newParticles
+
+        else:
+        	self.initializeUniformly(gameState)
         
 
     def elapseTime(self, gameState):
@@ -382,13 +385,11 @@ class ParticleFilter(InferenceModule):
         Sample each particle's next state based on its current state and the
         gameState.
         """
-       	updatedParticles = []
-
-       	for particle in self.particles:
-       		newParticles = self.getPositionDistribution(gameState, particle)
-       		updatedParticles.append(newParticles.sample())
-
-       	self.particles = updatedParticles
+        newParticles = []
+        for particle in self.particles:
+            newPos = self.getPositionDistribution(gameState, particle)
+            next_particles.append(newPos.sample())
+        self.particles = next_particles
 
     def getBeliefDistribution(self):
         """
@@ -461,8 +462,28 @@ class JointParticleFilter(ParticleFilter):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-        "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+
+        pacmanPosition = gameState.getPacmanPosition()
+        distribution = DiscreteDistribution()
+
+        for particle in self.particles:
+        	prev = 1
+        	for i in range(self.numGhosts):
+        		prev *= self.getObservationProb(observation[i], 
+        			pacmanPosition, particle[i], self.getJailPosition(i))
+
+        	distribution[particle] += prev
+        
+        newParticles = []
+        if distribution.total() != 0:
+        	for i in range(self.numParticles):
+        		sample = distribution.sample()
+        		if sample is not None:
+        			newParticles.append(sample)
+        		self.particles = newParticles
+
+        else:
+        	self.initializeUniformly(gameState)
 
     def elapseTime(self, gameState):
         """
